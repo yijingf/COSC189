@@ -50,7 +50,7 @@ def split_data_with_label():
                 continue
             if interval_ind >= len(interval_list): break
             # split in time
-            whole_time_brain = np.array(fmri_img.get_fdata(), dtype=np.float32).transpose(2, 0, 1, 3)  # z, x, y, time
+            whole_time_brain = np.array(fmri_img.get_fdata(), dtype=np.float32).transpose(2, 3, 0, 1)  # z, time, x, y
 
             if len(interval_list) * 0.75 > interval_ind:
                 file_type = 'train'
