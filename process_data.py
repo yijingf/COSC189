@@ -61,10 +61,10 @@ def split_data_with_label():
 
             for i, start in enumerate(interval_list[interval_ind]):
                 if i != len(interval_list[interval_ind]) - 1:
-                    img_label_dict = {'img':whole_time_brain[:, :, :, start:interval_list[interval_ind][i+1]],
+                    img_label_dict = {'img':whole_time_brain[:, start:interval_list[interval_ind][i+1], :, :],
                                       'label':label_list[interval_ind][i]}
                 else:
-                    img_label_dict = {'img':whole_time_brain[:, :, :, start:],
+                    img_label_dict = {'img':whole_time_brain[:, start:, :, :],
                                       'label':label_list[interval_ind][i]}
                 torch.save(img_label_dict, os.path.join(spatial_data_path, file_type, f"spatial_img_labels_{t_ind}.pt"))
                 t_ind += 1
