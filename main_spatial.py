@@ -35,6 +35,7 @@ def load_pretrained_model_utils(model_path):
 
 
 def eval_model(model, data):
+    model.eval()
     val_accuracies = AverageMeter()
     with torch.no_grad():
         for i, (input_data, labels) in enumerate(data):
@@ -75,7 +76,6 @@ def train(model, train_data, val_data, criterion, optimizer, tb_writer, ckpt_sav
                       'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                       'Acc {acc.val:.3f} ({acc.avg:.3f})'.format(loss=losses,
                                                                  acc=accuracies))
-        model.eval()
         val_accuracies = eval_model(model, val_data)
 
         print(f'Epoch: {ind_epo} \t Acc:{round(val_accuracies.avg, 3)}')
@@ -122,12 +122,13 @@ def main():
 
     interval_size = args.interval
     criterion = torch.nn.CrossEntropyLoss().to(device)
-    if args.mode == 'trani':
+    if args.mode == 'train':
+        appended_name = f'_interval_{interval_size}_y_channel'
         train_data_loader = DataLoader(SpatialDataset(mode='train', max_interval_size=interval_size),
                                        batch_size=args.batch_size, shuffle=True)
         val_data_loader = DataLoader(SpatialDataset(mode='val', max_interval_size=interval_size),
                                      batch_size=args.batch_size, shuffle=False)
-        tb_writer = SummaryWriter(log_dir="./log", filename_suffix=f'_interval_{interval_size}')
+        tb_writer = SummaryWriter(log_dir="./log", filename_suffix=appended_name)
 
         train(resnet,
               train_data=train_data_loader,
@@ -136,8 +137,9 @@ def main():
               optimizer=optimizer,
               tb_writer=tb_writer,
               ckpt_saved_path=os.path.join('models', 'spatial_model'),
-              save_name=f'_interval_{interval_size}'
+              save_name=appended_name
               )
+
     elif args.mode == 'test':
         if args.ckpt == "" or not os.path.exists(args.ckpt):
             raise Exception("Need specify which ckpt should be loaded")
