@@ -22,6 +22,8 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--interval", type=int, default=3)
     parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--mode", type=str, default='train')
+    parser.add_argument("--ckpt", type=str, default="")
     return parser.parse_args()
 
 
@@ -82,7 +84,7 @@ def train(model, train_data, val_data, criterion, optimizer, tb_writer, ckpt_sav
             torch.save({'model':model.state_dict(),
                         'epoch':ind_epo,
                         'optimizer':optimizer},
-                       os.path.join(ckpt_saved_path, f"epoch_{ind_epo}_{save_name}.pt"))
+                       os.path.join(ckpt_saved_path, f"best_{save_name}.pt"))
 
         tb_writer.add_scalar('train/loss', losses.avg, ind_epo)
         tb_writer.add_scalar('train/acc', accuracies.avg, ind_epo)
@@ -92,6 +94,7 @@ def train(model, train_data, val_data, criterion, optimizer, tb_writer, ckpt_sav
 def test(model, data):
     val_accuracies = eval_model(model, data)
     print(f'Test Acc:{round(val_accuracies.avg, 3)}')
+
 
 def main():
     pretrained_path = "./models/r3d18_K_200ep.pth"
@@ -118,22 +121,31 @@ def main():
                                 weight_decay=1e-3)
 
     interval_size = args.interval
-    train_data_loader = DataLoader(SpatialDataset(mode='train', max_interval_size=interval_size),
-                                   batch_size=args.batch_size, shuffle=True)
-    val_data_loader = DataLoader(SpatialDataset(mode='val', max_interval_size=interval_size),
-                                 batch_size=args.batch_size, shuffle=False)
-    tb_writer = SummaryWriter(log_dir="./log", filename_suffix=f'_interval_{interval_size}')
     criterion = torch.nn.CrossEntropyLoss().to(device)
+    if args.mode == 'trani':
+        train_data_loader = DataLoader(SpatialDataset(mode='train', max_interval_size=interval_size),
+                                       batch_size=args.batch_size, shuffle=True)
+        val_data_loader = DataLoader(SpatialDataset(mode='val', max_interval_size=interval_size),
+                                     batch_size=args.batch_size, shuffle=False)
+        tb_writer = SummaryWriter(log_dir="./log", filename_suffix=f'_interval_{interval_size}')
 
-    train(resnet,
-          train_data=train_data_loader,
-          val_data=val_data_loader,
-          criterion=criterion,
-          optimizer=optimizer,
-          tb_writer=tb_writer,
-          ckpt_saved_path=os.path.join('models', 'spatial_model'),
-          save_name=f'_interval_{interval_size}'
-          )
+        train(resnet,
+              train_data=train_data_loader,
+              val_data=val_data_loader,
+              criterion=criterion,
+              optimizer=optimizer,
+              tb_writer=tb_writer,
+              ckpt_saved_path=os.path.join('models', 'spatial_model'),
+              save_name=f'_interval_{interval_size}'
+              )
+    elif args.mode == 'test':
+        if args.ckpt == "" or not os.path.exists(args.ckpt):
+            raise Exception("Need specify which ckpt should be loaded")
+        ckpt = torch.load(args.ckpt)
+        resnet.load_state_dict(ckpt['model'])
+        test_data_loader = DataLoader(SpatialDataset(mode='test', max_interval_size=interval_size),
+                                      batch_size=args.batch_size, shuffle=False)
+        test(resnet, test_data_loader)
 
 
 if __name__ == '__main__':
