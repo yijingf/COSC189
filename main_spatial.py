@@ -23,6 +23,7 @@ def get_args():
     parser.add_argument("--interval", type=int, default=3)
     parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--mode", type=str, default='train')
+    parser.add_argument("--data_mode", type=str, default='_runs_out_align')
     parser.add_argument("--ckpt", type=str, default="")
     return parser.parse_args()
 
@@ -106,12 +107,12 @@ def main():
     # print(out.shape)
 
     # reset vital layers
-    resnet.conv1 = torch.nn.Conv3d(36,
+    resnet.conv1 = torch.nn.Conv3d(48 if 'align' in args.data_mode else 36,
                                    64,
                                    kernel_size=(7, 7, 7),
                                    stride=(1, 2, 2),
                                    padding=(3, 3, 3),
-                                   bias=False)
+                                   bias=True)
     resnet.fc = torch.nn.Linear(resnet.fc_in, 5)
     resnet.to(device)
 
@@ -123,10 +124,12 @@ def main():
     interval_size = args.interval
     criterion = torch.nn.CrossEntropyLoss().to(device)
     if args.mode == 'train':
-        appended_name = f'_interval_{interval_size}_y_channel'
-        train_data_loader = DataLoader(SpatialDataset(mode='train', max_interval_size=interval_size),
+        appended_name = f'_interval_{interval_size}{args.data_mode}_transform'
+        train_data_loader = DataLoader(SpatialDataset(mode=f'train{args.data_mode}', max_interval_size=interval_size,
+                                                      transform=True),
                                        batch_size=args.batch_size, shuffle=True)
-        val_data_loader = DataLoader(SpatialDataset(mode='val', max_interval_size=interval_size),
+        val_data_loader = DataLoader(SpatialDataset(mode=f'val{args.data_mode}', max_interval_size=interval_size,
+                                                    transform=True),
                                      batch_size=args.batch_size, shuffle=False)
         tb_writer = SummaryWriter(log_dir="./log", filename_suffix=appended_name)
 
@@ -145,7 +148,7 @@ def main():
             raise Exception("Need specify which ckpt should be loaded")
         ckpt = torch.load(args.ckpt)
         resnet.load_state_dict(ckpt['model'])
-        test_data_loader = DataLoader(SpatialDataset(mode='test', max_interval_size=interval_size),
+        test_data_loader = DataLoader(SpatialDataset(mode=f'test{args.data_mode}', max_interval_size=interval_size),
                                       batch_size=args.batch_size, shuffle=False)
         test(resnet, test_data_loader)
 

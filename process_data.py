@@ -30,13 +30,14 @@ def split_data_with_label():
     spatial_data_path = "./data/spatial"
     if not os.path.exists(spatial_data_path):
         os.mkdir(spatial_data_path)
+    mod = '_runs_out_align'
+    if not os.path.exists(os.path.join(spatial_data_path, f'train{mod}')):
+        os.mkdir(os.path.join(spatial_data_path, f'train{mod}'))
+        os.mkdir(os.path.join(spatial_data_path, f'val{mod}'))
+        os.mkdir(os.path.join(spatial_data_path, f'test{mod}'))
 
-    if not os.path.exists(os.path.join(spatial_data_path, 'train')):
-        os.mkdir(os.path.join(spatial_data_path, 'train'))
-        os.mkdir(os.path.join(spatial_data_path, 'val'))
-        os.mkdir(os.path.join(spatial_data_path, 'test'))
-
-    fmri_fname = os.path.join(root_dir, 'data/ds113b', 'sub{:03d}', 'BOLD','task002_run{:03d}', 'bold.nii.gz')
+    target_file = 'bold_dico_bold7Tp1_to_subjbold7Tp1.nii.gz'  # bold.nii.gz
+    fmri_fname = os.path.join(root_dir, 'data/ds113b', 'sub{:03d}', 'BOLD','task002_run{:03d}', target_file)
     interval_ind = 0
     t_ind = 0  # num of training samples
 
@@ -52,12 +53,22 @@ def split_data_with_label():
             # split in time
             whole_time_brain = np.array(fmri_img.get_fdata(), dtype=np.float32).transpose(2, 3, 0, 1)  # z, time, x, y
 
-            if len(interval_list) * 0.75 > interval_ind:
-                file_type = 'train'
-            elif len(interval_list) * 0.85 > interval_ind:
-                file_type = 'val'
+            # split according the subjects
+            # if len(interval_list) * 0.75 > interval_ind:
+            #     file_type = 'train'
+            # elif len(interval_list) * 0.85 > interval_ind:
+            #     file_type = 'val'
+            # else:
+            #     file_type = 'test'
+
+            # split according to the runs
+            run_size = 8 if sub_id < 20 else 4
+            if run_size * 0.8 > run_id:
+                file_type = f'train{mod}'
+            elif run_size * 0.9 > run_id:
+                file_type = f'val{mod}'
             else:
-                file_type = 'test'
+                file_type = f'test{mod}'
 
             for i, start in enumerate(interval_list[interval_ind]):
                 if i != len(interval_list[interval_ind]) - 1:

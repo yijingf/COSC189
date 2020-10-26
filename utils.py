@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms, utils
 import os, random
 
 random.seed(42)
@@ -8,7 +9,7 @@ np.random.seed(42)
 
 
 class SpatialDataset(Dataset):
-    def __init__(self, root_path='./data/spatial', mode='train', max_interval_size=3):
+    def __init__(self, root_path='./data/spatial', mode='train', max_interval_size=3, transform=None):
         '''
         :param root_path: path for saving pre-processed data, train, eval, test
         :return:
@@ -17,6 +18,7 @@ class SpatialDataset(Dataset):
         self.label2int = {'ambient':0, 'symphonic':1, 'metal':2, 'rocknroll':3, 'country':4}
         self.item_list = sorted(os.listdir(self.dataset_path))
         self.max_interval_size = max_interval_size
+        self.transform = transform
         print(self.dataset_path, len(self.item_list))
 
     def __len__(self):
@@ -38,6 +40,10 @@ class SpatialDataset(Dataset):
             rand_idx = rand_idx[:self.max_interval_size]
             data = data[:, rand_idx, :, :]
         data = data.astype(np.float32)
+        if self.transform:
+            data = torch.from_numpy(data).div(255)
+        # data = data.transpose((2, 1, 0, 3)) # x channel
+        # data = data.transpose((3, 1, 2, 0)) # y channel
         return data, np.array([label], dtype=np.int)
 
 
@@ -71,9 +77,8 @@ def calculate_accuracy(outputs, targets):
 
 
 if __name__ == '__main__':
-    s_dataset = SpatialDataset(mode='train')
+    s_dataset = SpatialDataset(mode='train',transform=True)
     data_loader = DataLoader(s_dataset, batch_size=4, shuffle=True)
-    print(data_loader)
     for each in data_loader:
         imgs, labels = each
         print(imgs.shape, labels.shape)
