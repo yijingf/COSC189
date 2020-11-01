@@ -43,12 +43,12 @@ def load_data_in_file(data_path="./"):
         # features = data['img'][:, rand_idx[:3], :, :].transpose(1, 2, 3, 0).flatten() # get 3 images
 
         # without template
-        features = np.sum(data['img'], axis=1).transpose(1, 2, 0).flatten()
+        # features = np.sum(data['img'], axis=1).transpose(1, 2, 0).flatten()
 
         # use template, only consider non zero
-        # features = np.sum(data['img'], axis=1).transpose(1, 2, 0) * template
-        # idx = np.where(features != 0)
-        # features = features[idx[0], idx[1], idx[2]].flatten()
+        features = np.sum(data['img'], axis=1).transpose(1, 2, 0) * template
+        idx = np.where(features != 0)
+        features = features[idx[0], idx[1], idx[2]].flatten()
 
         X.append(np.expand_dims(features, axis=0))  # reduce dimension later?
         Y.append(label2int[data['label']])
@@ -93,34 +93,35 @@ def reduce_dimension():
     given data to reduce its dimension using PCA/t-sne
     :return:
     '''
-    template = ''
-    pca_path = f"./models/ml/pca{template}.joblib"
+    template = '_template'
+    type_ = '_subjects' # _subjects, _runs_out
+    pca_path = f"./models/ml/pca{template}{type_}.joblib"
     if not os.path.exists(os.path.join(pca_path)):
-        train_x, train_y = load_data_in_file('./data/spatial/train_runs_out_warp')
+        train_x, train_y = load_data_in_file(f'./data/spatial/train{type_}_warp')
         print("Start Training")
         pca = PCA(n_components=256, svd_solver='auto', whiten=True).fit(train_x)
         print("Start Transforming")
         dump(pca, pca_path)
         train_x_pca = pca.transform(train_x)
-        torch.save({'features': train_x_pca, 'label': train_y}, f'./data/spatial/spatial_features_reduction{template}_train.pt')
+        torch.save({'features': train_x_pca, 'label': train_y}, f'./data/spatial/spatial_features_reduction{template}{type_}_train.pt')
     else:
         pca = load(pca_path)
     print("Start")
-    val_x, val_y = load_data_in_file('./data/spatial/val_runs_out_warp')
-    test_x, test_y = load_data_in_file('./data/spatial/test_runs_out_warp')
+    val_x, val_y = load_data_in_file(f'./data/spatial/val{type_}_warp')
+    test_x, test_y = load_data_in_file(f'./data/spatial/test{type_}_warp')
 
     val_x_pca = pca.transform(val_x)
-    torch.save({'features': val_x_pca, 'label': val_y}, f'./data/spatial/spatial_features_reduction{template}_val.pt')
+    torch.save({'features': val_x_pca, 'label': val_y}, f'./data/spatial/spatial_features_reduction{template}{type_}_val.pt')
     del val_x, val_y
     test_x_pca = pca.transform(test_x)
-    torch.save({'features': test_x_pca, 'label': test_y}, f'./data/spatial/spatial_features_reduction{template}_test.pt')
+    torch.save({'features': test_x_pca, 'label': test_y}, f'./data/spatial/spatial_features_reduction{template}{type_}_test.pt')
 
 
 if __name__ == '__main__':
     args = get_args()
-    main()
-    # reduce_dimension()
-
+    # main()
+    reduce_dimension()
+    # RUNS OUT
     # Template
     # CLS Model svm, got acc: 0.611 and its confusion matrix is
     # [[54 19 12  5  5]
