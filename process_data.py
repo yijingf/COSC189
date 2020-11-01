@@ -30,14 +30,15 @@ def split_data_with_label():
     spatial_data_path = "./data/spatial"
     if not os.path.exists(spatial_data_path):
         os.mkdir(spatial_data_path)
-    mod = '_runs_out_align'
+    mod = '_subjects_warp'  # _runs_out_warp, _subjects_warp
     if not os.path.exists(os.path.join(spatial_data_path, f'train{mod}')):
         os.mkdir(os.path.join(spatial_data_path, f'train{mod}'))
         os.mkdir(os.path.join(spatial_data_path, f'val{mod}'))
         os.mkdir(os.path.join(spatial_data_path, f'test{mod}'))
 
     target_file = 'bold_dico_bold7Tp1_to_subjbold7Tp1.nii.gz'  # bold.nii.gz
-    fmri_fname = os.path.join(root_dir, 'data/ds113b', 'sub{:03d}', 'BOLD','task002_run{:03d}', target_file)
+    # fmri_fname = os.path.join(root_dir, 'data/ds113b', 'sub{:03d}', 'BOLD','task002_run{:03d}', target_file)
+    fmri_fname = os.path.join(root_dir, 'data/ds113b', 'warp', 'sub{:03d}_run{:03d}.npz')
     interval_ind = 0
     t_ind = 0  # num of training samples
 
@@ -45,30 +46,32 @@ def split_data_with_label():
         for run_id in range(1, 9):
             fmri_fname = fmri_fname.format(sub_id, run_id)
             try:
-                fmri_img = nib.load(fmri_fname)
+                # fmri_img = nib.load(fmri_fname)
+                # whole_time_brain = np.array(fmri_img.get_fdata(), dtype=np.float32).transpose(2,3,0,1) # split in time
+
+                fmri_img = np.load(fmri_fname)['a']
+                whole_time_brain = fmri_img.astype(np.float32).transpose(2,3,0,1)
             except:
                 print("Missing Data: {}".format(fmri_fname, 2))
                 continue
             if interval_ind >= len(interval_list): break
-            # split in time
-            whole_time_brain = np.array(fmri_img.get_fdata(), dtype=np.float32).transpose(2, 3, 0, 1)  # z, time, x, y
 
             # split according the subjects
-            # if len(interval_list) * 0.75 > interval_ind:
-            #     file_type = 'train'
-            # elif len(interval_list) * 0.85 > interval_ind:
-            #     file_type = 'val'
-            # else:
-            #     file_type = 'test'
-
-            # split according to the runs
-            run_size = 8 if sub_id < 20 else 4
-            if run_size * 0.8 > run_id:
+            if len(interval_list) * 0.75 > interval_ind:
                 file_type = f'train{mod}'
-            elif run_size * 0.9 > run_id:
+            elif len(interval_list) * 0.85 > interval_ind:
                 file_type = f'val{mod}'
             else:
                 file_type = f'test{mod}'
+
+            # split according to the runs_out
+            # run_size = 8 if sub_id < 20 else 4
+            # if run_size * 0.8 > run_id:
+            #     file_type = f'train{mod}'
+            # elif run_size * 0.9 > run_id:
+            #     file_type = f'val{mod}'
+            # else:
+            #     file_type = f'test{mod}'
 
             for i, start in enumerate(interval_list[interval_ind]):
                 if i != len(interval_list[interval_ind]) - 1:
@@ -77,9 +80,11 @@ def split_data_with_label():
                 else:
                     img_label_dict = {'img':whole_time_brain[:, start:, :, :],
                                       'label':label_list[interval_ind][i]}
+                # if not os.path.exists(os.path.join(spatial_data_path, file_type, f"spatial_img_labels_{t_ind}.pt")):
                 torch.save(img_label_dict, os.path.join(spatial_data_path, file_type, f"spatial_img_labels_{t_ind}.pt"))
                 t_ind += 1
             interval_ind += 1  # to next run_id
+        print(sub_id)
     print(interval_ind, t_ind)
 
 

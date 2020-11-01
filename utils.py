@@ -19,7 +19,9 @@ class SpatialDataset(Dataset):
         self.item_list = sorted(os.listdir(self.dataset_path))
         self.max_interval_size = max_interval_size
         self.transform = transform
-        print(self.dataset_path, len(self.item_list))
+        self.template = np.load(os.path.join(root_path, 'roi_template.npy')).transpose(2, 0, 1)
+        self.template = np.expand_dims(self.template, axis=1)
+        print(self.dataset_path, len(self.item_list), self.template.shape)
 
     def __len__(self):
         return len(self.item_list)
@@ -28,7 +30,6 @@ class SpatialDataset(Dataset):
         item_name = self.item_list[index]
         data_label_dict = torch.load(os.path.join(self.dataset_path, item_name))
         data, label = data_label_dict['img'], self.label2int[data_label_dict['label']]
-
         # pad information or split, [z, time, x, y]
         time_len = data.shape[1]
         if time_len < self.max_interval_size:
@@ -40,6 +41,10 @@ class SpatialDataset(Dataset):
             rand_idx = rand_idx[:self.max_interval_size]
             data = data[:, rand_idx, :, :]
         data = data.astype(np.float32)
+        data *= self.template
+
+        if self.max_interval_size == 1:
+            data = data.squeeze(axis=1)
         if self.transform:
             data = torch.from_numpy(data).div(255)
         # data = data.transpose((2, 1, 0, 3)) # x channel
@@ -77,7 +82,7 @@ def calculate_accuracy(outputs, targets):
 
 
 if __name__ == '__main__':
-    s_dataset = SpatialDataset(mode='train',transform=True)
+    s_dataset = SpatialDataset(mode='train_runs_out_warp',transform=True, max_interval_size=1)
     data_loader = DataLoader(s_dataset, batch_size=4, shuffle=True)
     for each in data_loader:
         imgs, labels = each
