@@ -1,5 +1,5 @@
 import resnet as ResNet
-from utils import SpatialDataset, calculate_accuracy, AverageMeter
+from utils import SpatialDataset, calculate_accuracy, AverageMeter, SpatialDataset_Reduction
 
 import torch
 from torch.utils.data import DataLoader
@@ -16,7 +16,7 @@ np.random.seed(seed)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-device = "cpu" if not torch.cuda.is_available() else "cuda:0"
+device = "cpu" if not torch.cuda.is_available() else "cuda:1"
 
 
 def get_args():
@@ -134,7 +134,7 @@ def main_3d():
     interval_size = args.interval
     criterion = torch.nn.CrossEntropyLoss().to(device)
     if args.mode == 'train':
-        appended_name = f'_bs{args.batch_size}_interval_{interval_size}{args.data_mode}_template' # transform or not
+        appended_name = f'_bs{args.batch_size}_interval_{interval_size}{args.data_mode}' # transform or not
         train_data_loader = DataLoader(SpatialDataset(mode=f'train{args.data_mode}', max_interval_size=interval_size,
                                                       transform=False),
                                        batch_size=args.batch_size, shuffle=True)
@@ -166,14 +166,15 @@ def main_3d():
 
 def main_2d():
     resnet = models.resnet18(pretrained=True)
-
+    template = '_template'
     # reset vital layers
-    resnet.conv1 = torch.nn.Conv2d(48,
-                                   64,
-                                   kernel_size=(7, 7),
-                                   stride=(2, 2),
-                                   padding=(3, 3),
-                                   bias=False)
+
+    # resnet.conv1 = torch.nn.Conv2d(3,
+    #                                64,
+    #                                kernel_size=(7, 7),
+    #                                stride=(2, 2),
+    #                                padding=(3, 3),
+    #                                bias=False)
     resnet.fc = torch.nn.Linear(512, 5)
 
     # random_data = torch.rand((1, 48, 132, 176))
@@ -189,13 +190,23 @@ def main_2d():
     interval_size = args.interval
     criterion = torch.nn.CrossEntropyLoss().to(device)
     if args.mode == 'train':
-        appended_name = f'_bs{args.batch_size}_{args.data_mode}_transform_template_2d' # transform or not
-        train_data_loader = DataLoader(SpatialDataset(mode=f'train{args.data_mode}', max_interval_size=1,
-                                                      transform=True),
+        appended_name = f'_bs{args.batch_size}_{args.data_mode}{template}_2d_reduction'
+        # train_data_loader = DataLoader(SpatialDataset(mode=f'train{args.data_mode}', max_interval_size=1,
+        #                                               transform=False),
+        #                                batch_size=args.batch_size, shuffle=True)
+        # val_data_loader = DataLoader(SpatialDataset(mode=f'val{args.data_mode}', max_interval_size=1,
+        #                                             transform=False),
+        #                              batch_size=args.batch_size, shuffle=False)
+
+        # Data After Reduction
+        train_data_loader = DataLoader(SpatialDataset_Reduction(data_path=f'./data/spatial/spatial_features'
+                                                                          f'_reduction{template}_train.pt',
+                                                                transform=False),
                                        batch_size=args.batch_size, shuffle=True)
-        val_data_loader = DataLoader(SpatialDataset(mode=f'val{args.data_mode}', max_interval_size=1,
-                                                    transform=True),
-                                     batch_size=args.batch_size, shuffle=False)
+        val_data_loader = DataLoader(SpatialDataset_Reduction(data_path=f'./data/spatial/spatial_features'
+                                                                        f'_reduction{template}_val.pt',
+                                                              transform=False),
+                                       batch_size=args.batch_size, shuffle=True)
         tb_writer = SummaryWriter(log_dir="./log", filename_suffix=appended_name)
 
         train(resnet,
@@ -213,9 +224,13 @@ def main_2d():
             raise Exception("Need specify which ckpt should be loaded")
         ckpt = torch.load(args.ckpt)
         resnet.load_state_dict(ckpt['model'])
-        test_data_loader = DataLoader(SpatialDataset(mode=f'test{args.data_mode}', max_interval_size=1,
-                                                     transform=True),
-                                      batch_size=args.batch_size, shuffle=False)
+        # test_data_loader = DataLoader(SpatialDataset(mode=f'test{args.data_mode}', max_interval_size=1,
+        #                                              transform=True),
+        #                               batch_size=args.batch_size, shuffle=False)
+        test_data_loader = DataLoader(SpatialDataset_Reduction(data_path=f'./data/spatial/spatial_features'
+                                                                        f'_reduction{template}_test.pt',
+                                                               transform=False),
+                                       batch_size=args.batch_size, shuffle=True)
         test(resnet, test_data_loader)
 
 

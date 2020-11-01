@@ -41,7 +41,7 @@ class SpatialDataset(Dataset):
             rand_idx = rand_idx[:self.max_interval_size]
             data = data[:, rand_idx, :, :]
         data = data.astype(np.float32)
-        data *= self.template
+        # data *= self.template
 
         if self.max_interval_size == 1:
             data = data.squeeze(axis=1)
@@ -49,6 +49,31 @@ class SpatialDataset(Dataset):
             data = torch.from_numpy(data).div(255)
         # data = data.transpose((2, 1, 0, 3)) # x channel
         # data = data.transpose((3, 1, 2, 0)) # y channel
+        return data, np.array([label], dtype=np.int)
+
+
+class SpatialDataset_Reduction(Dataset):
+    def __init__(self, data_path='./data/spatial', transform=None):
+        '''
+        :param data_path: path for saving pre-processed data, train, eval, test
+        :return:
+        '''
+        self.dataset_path = os.path.join(data_path)
+        ckpt = torch.load(self.dataset_path)
+        self.features = ckpt['features']
+        self.labels = ckpt['label']
+        self.label2int = {'ambient':0, 'symphonic':1, 'metal':2, 'rocknroll':3, 'country':4}
+        self.item_list = [i for i in range(self.features.shape[0])]
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.item_list)
+
+    def __getitem__(self, index):
+        data, label = self.features[index].astype(np.float32), self.labels[index]
+        if self.transform:
+            data = torch.from_numpy(data).div(255)
+        data = np.concatenate([data.reshape(1, 16, 16), np.zeros((2, 16, 16))], axis=0).astype(np.float32)
         return data, np.array([label], dtype=np.int)
 
 
@@ -82,7 +107,8 @@ def calculate_accuracy(outputs, targets):
 
 
 if __name__ == '__main__':
-    s_dataset = SpatialDataset(mode='train_runs_out_warp',transform=True, max_interval_size=1)
+    # s_dataset = SpatialDataset(mode='train_runs_out_warp',transform=True, max_interval_size=1)
+    s_dataset = SpatialDataset_Reduction(data_path=f'./data/spatial/spatial_features_reduction_template_train.pt')
     data_loader = DataLoader(s_dataset, batch_size=4, shuffle=True)
     for each in data_loader:
         imgs, labels = each
