@@ -167,8 +167,9 @@ def main_3d():
 def main_2d():
     resnet = models.resnet18(pretrained=True)
     template = '_template'
-    # reset vital layers
+    type_ = '_subjects' # type of _runs_out == '', _subjects
 
+    # reset vital layers
     # resnet.conv1 = torch.nn.Conv2d(3,
     #                                64,
     #                                kernel_size=(7, 7),
@@ -190,7 +191,7 @@ def main_2d():
     interval_size = args.interval
     criterion = torch.nn.CrossEntropyLoss().to(device)
     if args.mode == 'train':
-        appended_name = f'_bs{args.batch_size}_{args.data_mode}{template}_2d_reduction'
+        appended_name = f'_bs{args.batch_size}_{args.data_mode}{template}_2d_reduction{type_}'
         # train_data_loader = DataLoader(SpatialDataset(mode=f'train{args.data_mode}', max_interval_size=1,
         #                                               transform=False),
         #                                batch_size=args.batch_size, shuffle=True)
@@ -200,11 +201,11 @@ def main_2d():
 
         # Data After Reduction
         train_data_loader = DataLoader(SpatialDataset_Reduction(data_path=f'./data/spatial/spatial_features'
-                                                                          f'_reduction{template}_train.pt',
+                                                                          f'_reduction{template}{type_}_train.pt',
                                                                 transform=False),
                                        batch_size=args.batch_size, shuffle=True)
         val_data_loader = DataLoader(SpatialDataset_Reduction(data_path=f'./data/spatial/spatial_features'
-                                                                        f'_reduction{template}_val.pt',
+                                                                        f'_reduction{template}{type_}_val.pt',
                                                               transform=False),
                                        batch_size=args.batch_size, shuffle=True)
         tb_writer = SummaryWriter(log_dir="./log", filename_suffix=appended_name)
@@ -228,7 +229,7 @@ def main_2d():
         #                                              transform=True),
         #                               batch_size=args.batch_size, shuffle=False)
         test_data_loader = DataLoader(SpatialDataset_Reduction(data_path=f'./data/spatial/spatial_features'
-                                                                        f'_reduction{template}_test.pt',
+                                                                        f'_reduction{template}{type_}_test.pt',
                                                                transform=False),
                                        batch_size=args.batch_size, shuffle=True)
         test(resnet, test_data_loader)
@@ -238,3 +239,10 @@ if __name__ == '__main__':
     args = get_args()
     # main_3d()
     main_2d()
+# _subjects
+# [[ 72.  22.  15.   4.   2.]
+#  [  3.  89.   8.   6.   9.]
+#  [  3.   7. 101.   0.   4.]
+#  [  6.   7.  20.  79.   3.]
+#  [  3.   7.  15.  22.  68.]]
+# Test Acc:0.711
