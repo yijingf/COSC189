@@ -3,6 +3,8 @@ Data analysis on [High-resolution 7-Tesla fMRI data on the perception of musical
 
 The final prediction result can be found here: [COSC189/Fusion.ipynb at master · yijingf/COSC189 · GitHub](https://github.com/yijingf/COSC189/blob/master/fusion/Fusion.ipynb)
 
+## Preprocessing
+Data Alignment and warping.
 
 ## Spatial Encoding Module
 Spatial feature extraction and musical genre prediction.
